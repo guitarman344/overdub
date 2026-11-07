@@ -1,0 +1,540 @@
+<title>Regia Upload</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: banco di regia — colonna di lavoro (testi) + colonna laterale (checklist, storico); una colonna sotto 900px */
+:root {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --ink: #161a22;
+  --muted: #5b6372;
+  --line: #dde1e8;
+  --rec: #d92b2b;        /* luce REC */
+  --rec-soft: #fbe7e6;
+  --ok: #1d7a4f;
+  --ok-soft: #e2f3ea;
+  --warn: #9a6200;
+  --warn-soft: #fbf0d9;
+  --field: #f9fafb;
+  --ig: #a8307a;
+  --ig-soft: #f8e6f1;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1218; --panel: #171b23; --ink: #e8ebf0; --muted: #98a1b0; --line: #2a303b;
+  --rec: #ff5a52; --rec-soft: #3a1a1a; --ok: #5fd39a; --ok-soft: #15301f; --warn: #f0b54a; --warn-soft: #33270f;
+  --field: #12151c; --ig: #f08ac6; --ig-soft: #3a1830; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1218; --panel: #171b23; --ink: #e8ebf0; --muted: #98a1b0; --line: #2a303b;
+  --rec: #ff5a52; --rec-soft: #3a1a1a; --ok: #5fd39a; --ok-soft: #15301f; --warn: #f0b54a; --warn-soft: #33270f;
+  --field: #12151c; --ig: #f08ac6; --ig-soft: #3a1830; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5 }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 24px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance }
+h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.01em }
+h2 { font-size: 20px; font-weight: 700 }
+h3 { font-size: 16px; font-weight: 700 }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+a { color: inherit }
+
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 24px }
+.brand { display: flex; align-items: center; gap: 12px }
+.rec { width: 14px; height: 14px; border-radius: 50%; background: var(--rec); box-shadow: 0 0 0 4px var(--rec-soft); flex: none }
+@media (prefers-reduced-motion: no-preference) { .rec.live { animation: blink 1.2s steps(2, start) infinite } }
+@keyframes blink { to { opacity: .25 } }
+.sub { color: var(--muted); margin: 4px 0 0 }
+.quick { display: flex; flex-wrap: wrap; gap: 8px }
+.btn { font: 600 14px/1 var(--body); border-radius: 8px; padding: 11px 14px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px }
+.btn:hover { border-color: var(--muted) }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, label.chk:focus-within { outline: 2px solid var(--rec); outline-offset: 2px }
+.btn.primary { background: var(--rec); border-color: var(--rec); color: #fff }
+.btn.primary:hover { filter: brightness(1.08) }
+.btn.small { padding: 7px 10px; font-size: 12.5px }
+.btn[disabled] { opacity: .5; cursor: not-allowed }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start }
+@media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr) } }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0 }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0 }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0 }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px }
+input[type=text], input[type=url], textarea, select {
+  width: 100%; font: 400 15px/1.45 var(--body); color: var(--ink); background: var(--field);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px }
+textarea { resize: vertical; min-height: 84px }
+.row { display: flex; flex-wrap: wrap; gap: 12px }
+.row > .field { flex: 1 1 200px }
+.platforms { display: flex; flex-wrap: wrap; gap: 8px }
+label.chk { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; font-weight: 500; background: var(--field) }
+label.chk input { accent-color: var(--rec); margin: 0 }
+label.chk:has(input:checked) { border-color: var(--rec); background: var(--rec-soft) }
+
+.count { font: 500 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap }
+.count.over { color: var(--rec) }
+.copy-row { display: flex; gap: 8px; justify-content: flex-end }
+
+.out { display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--line); padding-top: 16px }
+.out-head { display: flex; align-items: center; gap: 10px }
+.tag { font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 3px 9px }
+.tag.yt { background: var(--rec-soft); color: var(--rec) }
+.tag.tt { background: var(--field); color: var(--ink); border: 1px solid var(--line) }
+.tag.ig { background: var(--ig-soft); color: var(--ig) }
+.tag.ex { background: var(--warn-soft); color: var(--warn) }
+.tag.draft { background: var(--warn-soft); color: var(--warn) }
+.tag.pub { background: var(--ok-soft); color: var(--ok) }
+
+.status { font-size: 13.5px; color: var(--muted); min-height: 1.4em }
+.status.err { color: var(--rec) }
+
+.checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px }
+.checklist li label { display: flex; gap: 10px; align-items: flex-start; padding: 6px 4px; border-radius: 6px; cursor: pointer }
+.checklist li label:hover { background: var(--field) }
+.checklist input { accent-color: var(--ok); margin-top: 3px; flex: none }
+.checklist input:checked + span { color: var(--muted); text-decoration: line-through }
+.checklist .hint { font: 400 12px var(--mono); color: var(--muted); display: block; text-decoration: none }
+.group-title { margin-top: 6px }
+.progress { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 999px; overflow: hidden }
+.progress > i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .2s }
+
+.specs { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; margin: 0 }
+.specs dt { color: var(--muted) }
+.specs dd { margin: 0; font-family: var(--mono); font-size: 12.5px }
+
+.history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column }
+.history li { border-top: 1px solid var(--line); padding: 12px 0; display: flex; flex-direction: column; gap: 6px }
+.history li:first-child { border-top: 0 }
+.h-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start }
+.h-title { font-weight: 600; overflow-wrap: anywhere }
+.h-meta { font: 400 12px var(--mono); color: var(--muted) }
+.h-actions { display: flex; flex-wrap: wrap; gap: 6px }
+.empty { color: var(--muted); font-size: 14px; border: 1px dashed var(--line); border-radius: 8px; padding: 16px }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand"><span class="rec" id="recDot"></span><h1>Regia Upload</h1></div>
+      <p class="sub">Prepara titolo, descrizione e hashtag, segui la checklist e tieni traccia di ogni video.</p>
+    </div>
+    <nav class="quick" aria-label="Apri le piattaforme">
+      <a class="btn" href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube Studio ↗</a>
+      <a class="btn" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" rel="noopener">TikTok Studio ↗</a>
+      <a class="btn" href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram ↗</a>
+      <a class="btn primary" href="http://localhost:8765" target="_blank" rel="noopener" title="Funziona sul Mac con Overdub aperta (doppio clic su Overdub.command)">● Registra la voce (Overdub) ↗</a>
+    </nav>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel" aria-labelledby="h-video">
+        <div class="panel-head">
+          <h2 id="h-video">Il video</h2>
+          <span class="tag ex" id="exampleTag">Esempio</span>
+        </div>
+        <div class="field">
+          <label class="label" for="topic">Di cosa parla</label>
+          <textarea id="topic" placeholder="Descrivi il video: argomento, punti chiave, a chi è rivolto…"></textarea>
+        </div>
+        <div class="row">
+          <div class="field">
+            <span class="label">Dove lo pubblichi</span>
+            <div class="platforms">
+              <label class="chk"><input type="checkbox" id="pYt" checked> YouTube</label>
+              <label class="chk"><input type="checkbox" id="pShorts"> YouTube Shorts</label>
+              <label class="chk"><input type="checkbox" id="pTt" checked> TikTok</label>
+              <label class="chk"><input type="checkbox" id="pIg" checked> Instagram</label>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="tone">Tono</label>
+            <select id="tone">
+              <option>Amichevole</option>
+              <option>Informativo</option>
+              <option>Divertente</option>
+              <option>Professionale</option>
+              <option>Emozionale</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="align-items:center">
+          <button class="btn primary" id="genBtn" type="button">Genera testi con Claude</button>
+          <button class="btn" id="newBtn" type="button">Nuovo video</button>
+          <span class="status" id="genStatus" role="status"></span>
+        </div>
+
+        <div class="out" id="outYt">
+          <div class="out-head"><span class="tag yt">YouTube</span><span class="label" id="ytKind">Video</span></div>
+          <div class="field">
+            <div class="field-top"><label class="label" for="ytTitle">Titolo</label><span class="count" data-for="ytTitle" data-max="100"></span></div>
+            <input type="text" id="ytTitle">
+            <div class="copy-row"><button class="btn small" data-copy="ytTitle" type="button">Copia titolo</button></div>
+          </div>
+          <div class="field">
+            <div class="field-top"><label class="label" for="ytDesc">Descrizione</label><span class="count" data-for="ytDesc" data-max="5000"></span></div>
+            <textarea id="ytDesc" rows="7"></textarea>
+            <div class="copy-row"><button class="btn small" data-copy="ytDesc" type="button">Copia descrizione</button></div>
+          </div>
+          <div class="field">
+            <div class="field-top"><label class="label" for="ytTags">Tag (separati da virgola)</label><span class="count" data-for="ytTags" data-max="500"></span></div>
+            <input type="text" id="ytTags">
+            <div class="copy-row"><button class="btn small" data-copy="ytTags" type="button">Copia tag</button></div>
+          </div>
+        </div>
+
+        <div class="out" id="outTt">
+          <div class="out-head"><span class="tag tt">TikTok</span></div>
+          <div class="field">
+            <div class="field-top"><label class="label" for="ttCaption">Didascalia con hashtag</label><span class="count" data-for="ttCaption" data-max="4000"></span></div>
+            <textarea id="ttCaption" rows="4"></textarea>
+            <div class="copy-row"><button class="btn small" data-copy="ttCaption" type="button">Copia didascalia</button></div>
+          </div>
+        </div>
+
+        <div class="out" id="outIg">
+          <div class="out-head"><span class="tag ig">Instagram</span><span class="label">Reel</span></div>
+          <div class="field">
+            <div class="field-top"><label class="label" for="igCaption">Didascalia con hashtag</label><span class="count" data-for="igCaption" data-max="2200"></span></div>
+            <textarea id="igCaption" rows="5"></textarea>
+            <div class="copy-row"><button class="btn small" data-copy="igCaption" type="button">Copia didascalia</button></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col">
+      <section class="panel" aria-labelledby="h-check">
+        <div class="panel-head"><h2 id="h-check">Checklist</h2><span class="count" id="checkCount"></span></div>
+        <div class="progress" aria-hidden="true"><i id="checkBar"></i></div>
+        <div id="checklists"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-save">
+        <h2 id="h-save">Salva</h2>
+        <div class="field">
+          <label class="label" for="link">Link del video pubblicato (facoltativo)</label>
+          <input type="url" id="link" placeholder="https://youtu.be/…, https://www.tiktok.com/@… o https://www.instagram.com/reel/…">
+        </div>
+        <div class="row">
+          <button class="btn" id="saveDraft" type="button">Salva come bozza</button>
+          <button class="btn primary" id="savePub" type="button">Segna come pubblicato</button>
+        </div>
+        <span class="status" id="saveStatus" role="status"></span>
+      </section>
+
+      <section class="panel" aria-labelledby="h-hist">
+        <div class="panel-head"><h2 id="h-hist">Storico</h2><span class="count" id="histCount"></span></div>
+        <ul class="history" id="history"></ul>
+        <div class="empty" id="histEmpty">Qui compariranno i video che salvi. Prepara i testi e premi “Salva come bozza” o “Segna come pubblicato”.</div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-specs">
+        <h2 id="h-specs">Formati consigliati</h2>
+        <h3>YouTube</h3>
+        <dl class="specs">
+          <dt>Formato</dt><dd>16:9 · 1920×1080</dd>
+          <dt>Miniatura</dt><dd>1280×720 · max 2 MB</dd>
+          <dt>Titolo</dt><dd>max 100 caratteri</dd>
+          <dt>Hashtag</dt><dd>i primi 3 vanno sopra il titolo</dd>
+        </dl>
+        <h3>Shorts / TikTok</h3>
+        <dl class="specs">
+          <dt>Formato</dt><dd>9:16 · 1080×1920</dd>
+          <dt>Shorts</dt><dd>fino a 3 minuti</dd>
+          <dt>Testo</dt><dd>lascia libero il bordo basso e destro</dd>
+        </dl>
+        <h3>Instagram Reels</h3>
+        <dl class="specs">
+          <dt>Formato</dt><dd>9:16 · 1080×1920</dd>
+          <dt>Griglia</dt><dd>la copertina si vede tagliata in 3:4</dd>
+          <dt>Didascalia</dt><dd>max 2200 caratteri</dd>
+          <dt>Hashtag</dt><dd>pochi e mirati, 3-5</dd>
+        </dl>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const FIELDS = ["topic", "ytTitle", "ytDesc", "ytTags", "ttCaption", "igCaption", "link"];
+const PLATFORM_IDS = { yt: "pYt", shorts: "pShorts", tt: "pTt", ig: "pIg" };
+
+const EXAMPLE = {
+  topic: "Tutorial: come accordare la chitarra a orecchio senza accordatore, per principianti. Trucco del 5° tasto, errori comuni, verifica con gli armonici.",
+  ytTitle: "Accordare la chitarra SENZA accordatore (metodo facile per principianti)",
+  ytDesc: "In questo video ti mostro come accordare la chitarra a orecchio usando il trucco del 5° tasto.\n\n⏱️ Capitoli\n0:00 Introduzione\n0:45 La corda di riferimento\n2:10 Il trucco del 5° tasto\n5:30 Verifica con gli armonici\n7:15 Errori comuni\n\nSe ti è utile, iscriviti al canale per altri tutorial!\n\n#chitarra #tutorialchitarra #principianti",
+  ytTags: "accordare chitarra, chitarra principianti, accordatura a orecchio, tutorial chitarra, lezioni di chitarra",
+  ttCaption: "Accordi la chitarra senza accordatore in 60 secondi 🎸 Salvalo per dopo! #chitarra #imparaconTikTok #chitarristi #tutorial #musica",
+  igCaption: "Niente accordatore? Nessun problema 🎸\n\nCon il trucco del 5° tasto accordi la chitarra a orecchio in un minuto. Salva il reel e provalo alla prossima prova.\n\n#chitarra #chitarristi #tutorialchitarra",
+  platforms: { yt: true, shorts: false, tt: true, ig: true },
+  tone: "Amichevole",
+  checks: {}
+};
+
+const CHECKS = {
+  yt: { name: "YouTube", items: [
+    ["file", "Video esportato in 16:9 (1080p o più)"],
+    ["thumb", "Miniatura caricata", "1280×720, testo leggibile da telefono"],
+    ["meta", "Titolo, descrizione e tag incollati"],
+    ["chap", "Capitoli in descrizione", "il primo deve partire da 0:00"],
+    ["kids", "Indicato se è “per bambini” o no"],
+    ["end", "Schermata finale e schede aggiunte"],
+    ["vis", "Visibilità o programmazione impostata"]
+  ]},
+  shorts: { name: "YouTube Shorts", items: [
+    ["sfile", "Video 9:16, massimo 3 minuti"],
+    ["stitle", "Titolo con #shorts o hashtag rilevanti"],
+    ["ssound", "Audio e musica con licenza"]
+  ]},
+  tt: { name: "TikTok", items: [
+    ["tfile", "Video 9:16 · 1080×1920"],
+    ["tcover", "Copertina scelta", "fotogramma con il soggetto chiaro"],
+    ["tcap", "Didascalia e hashtag incollati"],
+    ["tsound", "Suono di tendenza o audio originale"],
+    ["tperm", "Duetto, Stitch e commenti impostati"],
+    ["taigc", "Etichetta “contenuto IA” se serve"],
+    ["tsched", "Pubblicazione o programmazione impostata"]
+  ]},
+  ig: { name: "Instagram", items: [
+    ["ifile", "Reel 9:16 · 1080×1920"],
+    ["icover", "Copertina scelta", "controlla anche il ritaglio 3:4 della griglia"],
+    ["icap", "Didascalia e hashtag incollati"],
+    ["iaudio", "Audio originale o brano dalla libreria"],
+    ["itag", "Persone e luogo taggati se servono"],
+    ["iaigc", "Etichetta “IA” se serve"],
+    ["ifeed", "Condivisione nel feed attiva"]
+  ]}
+};
+
+let state = structuredClone(EXAMPLE);
+let isExample = true;
+let editingId = null;
+
+function setForm(s) {
+  FIELDS.forEach(f => { $(f).value = s[f] || ""; });
+  Object.entries(PLATFORM_IDS).forEach(([k, id]) => { $(id).checked = !!s.platforms[k]; });
+  $("tone").value = s.tone || "Amichevole";
+  $("exampleTag").hidden = !isExample;
+  refresh();
+}
+function readForm() {
+  FIELDS.forEach(f => { state[f] = $(f).value; });
+  state.platforms = Object.fromEntries(Object.entries(PLATFORM_IDS).map(([k, id]) => [k, $(id).checked]));
+  state.tone = $("tone").value;
+}
+
+function refresh() {
+  document.querySelectorAll(".count[data-for]").forEach(c => {
+    const len = [...$(c.dataset.for).value].length, max = +c.dataset.max;
+    c.textContent = len + " / " + max;
+    c.classList.toggle("over", len > max);
+  });
+  const p = state.platforms;
+  $("outYt").hidden = !(p.yt || p.shorts);
+  $("ytKind").textContent = p.yt && p.shorts ? "Video e Shorts" : p.shorts ? "Shorts" : "Video";
+  $("outTt").hidden = !p.tt;
+  $("outIg").hidden = !p.ig;
+  renderChecklist();
+}
+
+function renderChecklist() {
+  const box = $("checklists");
+  box.textContent = "";
+  let total = 0, done = 0;
+  Object.entries(CHECKS).forEach(([key, grp]) => {
+    if (!state.platforms[key]) return;
+    const h = document.createElement("div");
+    h.className = "label group-title";
+    h.textContent = grp.name;
+    const ul = document.createElement("ul");
+    ul.className = "checklist";
+    grp.items.forEach(([id, text, hint]) => {
+      total++;
+      const li = document.createElement("li");
+      const lab = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = "chk-" + id;
+      cb.checked = !!state.checks[id];
+      if (cb.checked) done++;
+      cb.addEventListener("change", () => { state.checks[id] = cb.checked; saveLocal(); renderChecklist(); });
+      const sp = document.createElement("span");
+      sp.textContent = text;
+      if (hint) { const hs = document.createElement("span"); hs.className = "hint"; hs.textContent = hint; sp.appendChild(hs); }
+      lab.append(cb, sp); li.appendChild(lab); ul.appendChild(li);
+    });
+    box.append(h, ul);
+  });
+  if (!total) { const e = document.createElement("p"); e.className = "empty"; e.textContent = "Scegli almeno una piattaforma."; box.appendChild(e); }
+  $("checkCount").textContent = done + " / " + total;
+  $("checkBar").style.width = total ? (done / total * 100) + "%" : "0";
+}
+
+function saveLocal() {
+  if (isExample) return;
+  try { localStorage.setItem("regia-draft", JSON.stringify({ state, editingId })); } catch (e) {}
+}
+
+document.addEventListener("input", (e) => {
+  if (!e.target.id || e.target.id.startsWith("chk-")) return;
+  if (isExample && FIELDS.includes(e.target.id)) { isExample = false; $("exampleTag").hidden = true; }
+  readForm(); refresh(); saveLocal();
+});
+document.addEventListener("change", (e) => {
+  if ([...Object.values(PLATFORM_IDS), "tone"].includes(e.target.id)) { readForm(); refresh(); saveLocal(); }
+});
+
+document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", async () => {
+  const el = $(b.dataset.copy), old = b.textContent;
+  try { await navigator.clipboard.writeText(el.value); b.textContent = "Copiato"; }
+  catch (e) { el.focus(); el.select(); b.textContent = "Selezionato: premi ⌘C"; }
+  setTimeout(() => { b.textContent = old; }, 1600);
+}));
+
+$("newBtn").addEventListener("click", () => {
+  state = { topic: "", ytTitle: "", ytDesc: "", ytTags: "", ttCaption: "", igCaption: "", link: "", platforms: { ...state.platforms }, tone: state.tone, checks: {} };
+  isExample = false; editingId = null;
+  setForm(state); saveLocal();
+  $("saveStatus").textContent = ""; $("topic").focus();
+});
+
+// ---- Claude: generazione testi ----
+let samplePromise = window.claude?.use ? window.claude.use("sample") : Promise.resolve(null);
+let genAbort = null;
+$("genBtn").addEventListener("click", async () => {
+  readForm();
+  const st = $("genStatus");
+  st.classList.remove("err");
+  if (!state.topic.trim()) { st.textContent = "Scrivi prima di cosa parla il video."; st.classList.add("err"); return; }
+  const p = state.platforms;
+  if (!p.yt && !p.shorts && !p.tt && !p.ig) { st.textContent = "Scegli almeno una piattaforma."; st.classList.add("err"); return; }
+  const sample = await samplePromise;
+  if (!sample) { st.textContent = "La generazione non è disponibile in questa vista. Scrivi i testi a mano."; st.classList.add("err"); return; }
+  genAbort?.abort(); genAbort = new AbortController();
+  $("genBtn").disabled = true; $("recDot").classList.add("live");
+  st.textContent = "Claude sta scrivendo…";
+  const want = [];
+  if (p.yt || p.shorts) want.push(`"ytTitle": titolo YouTube accattivante, max 90 caratteri${p.shorts && !p.yt ? ", includi #shorts" : ""}`,
+    `"ytDesc": descrizione YouTube: 2-3 frasi d'apertura con le parole chiave, ${p.yt ? "capitoli d'esempio con timestamp da 0:00 marcati come da verificare, " : ""}invito a iscriversi, poi 3 hashtag in fondo`,
+    `"ytTags": 8-12 tag YouTube separati da virgola, totale sotto 450 caratteri`);
+  if (p.tt) want.push(`"ttCaption": didascalia TikTok breve (max 150 caratteri di testo) con un gancio iniziale e 4-6 hashtag pertinenti`);
+  if (p.ig) want.push(`"igCaption": didascalia per un Reel Instagram: prima riga gancio che si legge prima del "altro", poi 2-3 frasi, un invito a salvare o commentare, e in fondo 3-5 hashtag mirati; usa a capo tra le parti`);
+  const prompt = `Sei un esperto di contenuti social italiani. Scrivi in italiano, tono ${state.tone.toLowerCase()}.
+Video: """${state.topic}"""
+Rispondi SOLO con un oggetto JSON con queste chiavi:
+${want.map(w => "- " + w).join("\n")}
+Niente testo fuori dal JSON.`;
+  try {
+    const out = await sample.json(prompt, { signal: genAbort.signal, modelTier: "default" });
+    ["ytTitle", "ytDesc", "ytTags", "ttCaption", "igCaption"].forEach(k => { if (typeof out?.[k] === "string") state[k] = out[k]; });
+    isExample = false; setForm(state); saveLocal();
+    st.textContent = "Fatto. Rileggi e modifica quello che vuoi.";
+  } catch (e) {
+    st.classList.add("err");
+    st.textContent = e?.code === "not_granted" ? "Permesso negato: puoi scrivere i testi a mano."
+      : e?.code === "rate_limited" ? "Troppe richieste ravvicinate. Riprova tra un minuto."
+      : e?.name === "AbortError" ? "" : "Generazione non riuscita. Riprova.";
+  } finally {
+    $("genBtn").disabled = false; $("recDot").classList.remove("live");
+  }
+});
+
+// ---- Storico (db, privato per persona) ----
+let col = null;
+const fmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+const timer = setTimeout(() => { if (!col) $("histEmpty").textContent = "Lo storico non è raggiungibile ora: i testi restano comunque in questa pagina."; }, 10000);
+
+(async () => {
+  const [db, user] = await Promise.all([
+    window.claude?.use ? window.claude.use("db") : null,
+    window.claude?.use ? window.claude.use("user") : null
+  ]);
+  if (!db || !user) { clearTimeout(timer); $("histEmpty").textContent = "Accedi a claude.ai per salvare lo storico dei video."; return; }
+  const id = await user.id();
+  col = db.collection("data/users/" + id + "/uploads");
+  col.orderBy("updatedAt", "desc").limit(200).onSnapshot(snap => {
+    clearTimeout(timer);
+    renderHistory(snap.docs);
+  }, () => { clearTimeout(timer); $("histEmpty").textContent = "Non riesco a leggere lo storico. Ricarica la pagina più tardi."; });
+})();
+
+function renderHistory(docs) {
+  const ul = $("history");
+  ul.textContent = "";
+  $("histEmpty").hidden = docs.length > 0;
+  $("histEmpty").textContent = "Qui compariranno i video che salvi. Prepara i testi e premi “Salva come bozza” o “Segna come pubblicato”.";
+  $("histCount").textContent = docs.length ? docs.length + " video" : "";
+  docs.forEach(d => {
+    const v = d.data();
+    const li = document.createElement("li");
+    const top = document.createElement("div"); top.className = "h-top";
+    const t = document.createElement("div"); t.className = "h-title";
+    t.textContent = v.ytTitle || v.ttCaption?.slice(0, 70) || v.igCaption?.slice(0, 70) || v.topic?.slice(0, 70) || "Senza titolo";
+    const tag = document.createElement("span");
+    tag.className = "tag " + (v.status === "pubblicato" ? "pub" : "draft");
+    tag.textContent = v.status === "pubblicato" ? "Pubblicato" : "Bozza";
+    top.append(t, tag);
+    const meta = document.createElement("div"); meta.className = "h-meta";
+    const plats = [v.platforms?.yt && "YouTube", v.platforms?.shorts && "Shorts", v.platforms?.tt && "TikTok", v.platforms?.ig && "Instagram"].filter(Boolean).join(" · ");
+    meta.textContent = fmt.format(new Date(v.updatedAt || Date.now())) + (plats ? " · " + plats : "");
+    const act = document.createElement("div"); act.className = "h-actions";
+    const open = document.createElement("button"); open.type = "button"; open.className = "btn small"; open.textContent = "Apri";
+    open.addEventListener("click", () => {
+      state = { topic: "", ytTitle: "", ytDesc: "", ytTags: "", ttCaption: "", igCaption: "", link: "", tone: "Amichevole", ...structuredClone(v) };
+      state.platforms = state.platforms || { yt: true, shorts: false, tt: true };
+      state.checks = state.checks || {};
+      isExample = false; editingId = d.id; setForm(state); saveLocal();
+      $("saveStatus").textContent = "Stai modificando un video salvato.";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    act.appendChild(open);
+    if (v.link && /^https:\/\//.test(v.link)) {
+      const a = document.createElement("a"); a.className = "btn small"; a.href = v.link; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Guarda ↗";
+      act.appendChild(a);
+    }
+    const del = document.createElement("button"); del.type = "button"; del.className = "btn small"; del.textContent = "Elimina";
+    del.addEventListener("click", async () => {
+      if (del.dataset.armed) { try { await col.doc(d.id).delete(); if (editingId === d.id) editingId = null; } catch (e) { del.textContent = "Errore"; } }
+      else { del.dataset.armed = "1"; del.textContent = "Conferma eliminazione"; setTimeout(() => { delete del.dataset.armed; del.textContent = "Elimina"; }, 3000); }
+    });
+    act.appendChild(del);
+    li.append(top, meta, act);
+    ul.appendChild(li);
+  });
+}
+
+async function save(status) {
+  readForm();
+  const st = $("saveStatus");
+  st.classList.remove("err");
+  if (!col) { st.textContent = "Lo storico non è disponibile: accedi a claude.ai e ricarica."; st.classList.add("err"); return; }
+  if (isExample) { st.textContent = "Questo è l'esempio: premi “Nuovo video” o modifica i testi prima di salvare."; st.classList.add("err"); return; }
+  const body = { ...structuredClone(state), status, updatedAt: Date.now() };
+  try {
+    const ref = editingId ? col.doc(editingId) : col.doc();
+    await ref.set(body);
+    editingId = ref.id; saveLocal();
+    st.textContent = status === "pubblicato" ? "Segnato come pubblicato." : "Bozza salvata.";
+  } catch (e) {
+    st.classList.add("err");
+    st.textContent = e?.code === "quota_exceeded" ? "Spazio esaurito: elimina qualche video vecchio dallo storico." : "Salvataggio non riuscito. Riprova.";
+  }
+}
+$("saveDraft").addEventListener("click", () => save("bozza"));
+$("savePub").addEventListener("click", () => save("pubblicato"));
+
+// Avvio: riprende la bozza locale se c'è, altrimenti mostra l'esempio
+try {
+  const saved = JSON.parse(localStorage.getItem("regia-draft") || "null");
+  if (saved?.state) { state = saved.state; state.checks = state.checks || {}; editingId = saved.editingId || null; isExample = false; }
+} catch (e) {}
+setForm(state);
+</script>

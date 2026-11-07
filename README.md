@@ -1,6 +1,6 @@
 # Overdub
 
-Piccola app per Mac che aiuta a registrare la voce fuori campo dei video per YouTube e TikTok.
+Piccola app per Mac che aiuta a registrare la voce fuori campo dei video per YouTube, TikTok e Instagram.
 Gira nel browser su `localhost`, legge il copione scena per scena e registra ogni scena in un file WAV a parte,
 direttamente dalla tua scheda audio.
 
@@ -49,6 +49,19 @@ Se crei un file `config.json` accanto a `server.py` con
 ```
 
 nella barra laterale compare un pulsante che apre quella pagina, per esempio quella dove prepari titoli e descrizioni.
+
+## Pagina compagna: Regia Upload
+
+`regia-upload.html` è una pagina per preparare la pubblicazione su **YouTube, YouTube Shorts, TikTok e Instagram Reels**:
+
+- Claude genera titolo, descrizione, tag e didascalie con hashtag, a partire da una breve descrizione del video;
+- contatore dei caratteri per i limiti di ogni piattaforma e pulsanti per copiare;
+- checklist di pubblicazione per ogni piattaforma e formati consigliati;
+- storico privato dei video, con lo stato bozza o pubblicato e il link.
+
+È pensata per essere pubblicata come **artifact su claude.ai**: la generazione dei testi e lo storico usano le funzioni
+di claude.ai (`window.claude`). Aperta altrove, funzionano solo i testi scritti a mano, la checklist e i link.
+Il pulsante "Registra la voce" apre Overdub su `localhost:8765`.
 
 ## Consigli per la voce
 
