@@ -1,0 +1,7 @@
+# impostazioni e file personali
+config.json
+regia.log
+regia-upload.html
+montaggio/
+.DS_Store
+__pycache__/

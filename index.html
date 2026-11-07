@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Regia</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: colonna sinistra con i video, area destra con schede Copione / Registra */
+:root {
+  --bg: #0f1218; --panel: #171b23; --ink: #e8ebf0; --muted: #98a1b0; --line: #2a303b;
+  --rec: #ff4d45; --ok: #5fd39a; --warn: #f0b54a;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Instrument Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body) }
+.app { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100vh }
+@media (max-width: 800px) { .app { grid-template-columns: minmax(0, 1fr) } }
+aside { border-right: 1px solid var(--line); padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; background: var(--panel) }
+main { padding: 24px 24px 64px; display: flex; flex-direction: column; gap: 18px; max-width: 980px; min-width: 0 }
+h1 { font: 700 24px var(--display); margin: 0; display: flex; align-items: center; gap: 10px }
+h2 { font: 700 22px var(--display); margin: 0; overflow-wrap: anywhere }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--rec); box-shadow: 0 0 0 4px #ff4d4526 }
+.dot.on { animation: blink 1s steps(2, start) infinite }
+@keyframes blink { to { opacity: .2 } }
+@media (prefers-reduced-motion: reduce) { .dot.on { animation: none } }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.muted { color: var(--muted); font-size: 13px }
+button, .btn { font: 600 14px var(--body); border-radius: 10px; padding: 10px 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; text-decoration: none; display: inline-flex; gap: 8px; align-items: center }
+button:hover, .btn:hover { border-color: var(--muted) }
+button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible, .btn:focus-visible { outline: 2px solid var(--rec); outline-offset: 2px }
+button.rec { background: var(--rec); border-color: var(--rec); color: #fff; min-width: 190px; padding: 12px 18px; font-size: 15px }
+button[disabled] { opacity: .45; cursor: not-allowed }
+input[type=text], textarea, select { font: 400 15px/1.5 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100% }
+select { width: auto; max-width: 100% }
+.newrow { display: flex; gap: 6px }
+.vlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; overflow: auto }
+.vlist button { width: 100%; text-align: left; flex-direction: column; align-items: flex-start; gap: 2px; border-color: transparent; background: transparent; font-weight: 500 }
+.vlist button.cur { background: var(--bg); border-color: var(--line) }
+.vlist .meta { font: 500 11.5px var(--mono); color: var(--muted) }
+.vhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between }
+.vhead .acts { display: flex; flex-wrap: wrap; gap: 8px }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line) }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 10px 14px; color: var(--muted) }
+.tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--rec) }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px }
+.panel.recording { border-color: var(--rec) }
+textarea#script { min-height: 360px; font-size: 16px; resize: vertical }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.meter { flex: 1 1 200px; display: flex; flex-direction: column; gap: 4px }
+.track { height: 12px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; position: relative }
+.track i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ok); transition: background .1s }
+.mtxt { font: 500 12px var(--mono); color: var(--muted) }
+.ptext { font: 600 clamp(22px, 3.2vw, 34px)/1.4 var(--body); margin: 0; text-wrap: pretty }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.timer { font: 500 18px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.status { color: var(--muted); min-height: 1.5em; font-size: 14px }
+.status.err { color: var(--rec) }
+.scenes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px }
+.scenes button { width: 100%; text-align: left; align-items: flex-start; font-weight: 500; font-size: 13px; padding: 10px }
+.scenes button.cur { border-color: var(--ink) }
+.scenes .n { font: 500 12px var(--mono); flex: none; border-radius: 6px; padding: 1px 7px; background: var(--line) }
+.scenes .done .n { background: var(--ok); color: #0f1218 }
+.scenes .t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.empty { border: 1px dashed var(--line); border-radius: 12px; padding: 24px; color: var(--muted) }
+kbd { font: 500 12px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1><span class="dot" id="dot"></span>Regia</h1>
+    <div class="f">
+      <label class="label" for="newName">Nuovo video</label>
+      <div class="newrow"><input type="text" id="newName" placeholder="Nome della cartella"><button id="newBtn">Crea</button></div>
+    </div>
+    <span class="label">I tuoi video</span>
+    <ul class="vlist" id="vlist"></ul>
+    <a class="btn" id="uploadLink" href="#" target="_blank" rel="noopener" hidden>Testi e storico ↗</a>
+  </aside>
+
+  <main id="main">
+    <div class="empty" id="none">Scegli un video a sinistra oppure creane uno nuovo. Ogni video è una cartella dentro la tua cartella dei video.</div>
+
+    <div id="video" hidden>
+      <div class="vhead">
+        <div><h2 id="vname"></h2><span class="muted" id="vmeta"></span></div>
+        <div class="acts"><button id="revealBtn">Apri cartella</button></div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tabScript" aria-selected="false">Copione</button>
+        <button role="tab" id="tabRec" aria-selected="true">Registra voce</button>
+      </div>
+
+      <section class="panel" id="paneScript" hidden>
+        <label class="label" for="script">Copione: una scena per paragrafo, separate da una riga vuota</label>
+        <textarea id="script" placeholder="Prima scena…&#10;&#10;Seconda scena…"></textarea>
+        <div class="controls"><button id="saveScript">Salva copione</button><span class="status" id="scriptStatus" role="status"></span></div>
+      </section>
+
+      <div id="paneRec">
+        <section class="panel">
+          <div class="bar">
+            <div class="f"><label class="label" for="dev">Ingresso</label><select id="dev"><option>Premi “Attiva microfono”</option></select></div>
+            <div class="f"><label class="label" for="ch">Canale</label>
+              <select id="ch"><option value="0">Ingresso 1</option><option value="1">Ingresso 2</option><option value="mix">Entrambi</option></select></div>
+            <div class="meter"><span class="label">Livello</span><div class="track"><i id="lvl"></i></div><span class="mtxt" id="lvlTxt">—</span></div>
+            <button id="enable">Attiva microfono</button>
+          </div>
+        </section>
+        <section class="panel" id="prompter" style="margin-top:14px">
+          <span class="label" id="sceneLbl"></span>
+          <p class="ptext" id="ptext"></p>
+          <div class="controls">
+            <button class="rec" id="recBtn" disabled>● Registra scena</button>
+            <button id="playBtn" disabled>▶ Riascolta</button>
+            <button id="prevBtn">← Precedente</button>
+            <button id="nextBtn">Successiva →</button>
+            <span class="timer" id="timer">0:00</span>
+          </div>
+          <span class="status" id="status" role="status"><kbd>Spazio</kbd> avvia e ferma · <kbd>←</kbd> <kbd>→</kbd> cambiano scena</span>
+        </section>
+        <ul class="scenes" id="scenes" style="margin-top:14px"></ul>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let V = [], vid = null, cur = 0, tab = "rec";
+let stream = null, ctx = null, src = null, proc = null;
+let recording = false, chunks = [], t0 = 0, tick = null, player = null;
+
+const api = (p, o) => fetch(p, o).then(r => { if (!r.ok) throw new Error(); return r.json(); });
+const remember = () => { try { localStorage.setItem("regia", JSON.stringify({ v: vid?.name, cur, tab })); } catch (e) {} };
+
+async function loadList(select) {
+  V = (await api("/api/videos")).videos;
+  const ul = $("vlist"); ul.textContent = "";
+  V.forEach(v => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    if (vid && v.name === vid.name) b.className = "cur";
+    const n = document.createElement("span"); n.textContent = v.name;
+    const m = document.createElement("span"); m.className = "meta";
+    const d = v.done.filter(Boolean).length;
+    m.textContent = v.scenes.length ? `${d}/${v.scenes.length} scene registrate` : "nessun copione";
+    b.append(n, m); b.disabled = recording;
+    b.onclick = () => openVideo(v.name);
+    li.appendChild(b); ul.appendChild(li);
+  });
+  if (select) openVideo(select);
+}
+
+async function openVideo(name, keep) {
+  vid = await api("/api/video?v=" + encodeURIComponent(name));
+  if (!keep) cur = 0;
+  cur = Math.min(cur, Math.max(0, vid.scenes.length - 1));
+  $("none").hidden = true; $("video").hidden = false;
+  $("vname").textContent = vid.name;
+  $("vmeta").textContent = (vid.clips.length ? vid.clips.length + " file video · " : "") + `${vid.done.filter(Boolean).length}/${vid.scenes.length} scene registrate`;
+  $("script").value = vid.scenes.join("\n\n");
+  showTab(vid.scenes.length ? tab : "script");
+  renderRec(); loadList(); remember();
+}
+
+function showTab(t) {
+  tab = t;
+  $("tabScript").setAttribute("aria-selected", t === "script");
+  $("tabRec").setAttribute("aria-selected", t === "rec");
+  $("paneScript").hidden = t !== "script";
+  $("paneRec").hidden = t !== "rec";
+  remember();
+}
+
+function renderRec() {
+  const sc = vid?.scenes || [];
+  if (!sc.length) {
+    $("sceneLbl").textContent = "Nessun copione";
+    $("ptext").textContent = "Scrivi prima il copione nella scheda “Copione”.";
+    $("recBtn").disabled = true;
+  } else {
+    $("sceneLbl").textContent = `Scena ${cur + 1} di ${sc.length}` + (vid.done[cur] ? " · registrata" : "");
+    $("ptext").textContent = sc[cur];
+    $("recBtn").disabled = !stream;
+  }
+  $("playBtn").disabled = !vid?.done[cur] || recording;
+  $("prevBtn").disabled = cur === 0 || recording;
+  $("nextBtn").disabled = cur >= sc.length - 1 || recording;
+  const ul = $("scenes"); ul.textContent = "";
+  sc.forEach((t, i) => {
+    const li = document.createElement("li"); if (vid.done[i]) li.className = "done";
+    const b = document.createElement("button"); if (i === cur) b.className = "cur"; b.disabled = recording;
+    const n = document.createElement("span"); n.className = "n"; n.textContent = vid.done[i] ? "✓ " + (i + 1) : i + 1;
+    const tx = document.createElement("span"); tx.className = "t"; tx.textContent = t;
+    b.append(n, tx); b.onclick = () => { cur = i; renderRec(); remember(); };
+    li.appendChild(b); ul.appendChild(li);
+  });
+}
+
+// ---- audio ----
+async function listDevices() {
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+  const sel = $("dev"); sel.textContent = "";
+  devs.forEach(d => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || "Ingresso"; sel.appendChild(o); });
+  let pick = null; try { pick = localStorage.getItem("regia-dev"); } catch (e) {}
+  if (!devs.some(d => d.deviceId === pick)) pick = devs.find(d => /scarlett/i.test(d.label))?.deviceId;
+  if (pick) sel.value = pick;
+}
+// Registrazione nel thread audio (AudioWorklet): l'interfaccia non può più far perdere campioni.
+// Il worklet accumula blocchi da 16384 campioni e li passa alla pagina; il livello arriva a parte.
+const WORKLET = `
+class Rec extends AudioWorkletProcessor {
+  constructor() {
+    super(); this.on = false; this.mode = "0"; this.buf = new Float32Array(16384); this.n = 0; this.peak = 0; this.pn = 0;
+    this.port.onmessage = e => {
+      const m = e.data;
+      if (m.mode !== undefined) this.mode = m.mode;
+      if (m.cmd === "start") { this.on = true; this.n = 0; }
+      if (m.cmd === "stop") { this.flush(); this.on = false; this.port.postMessage({ done: true }); }
+    };
+  }
+  flush() { if (this.n) { const out = this.buf.slice(0, this.n); this.port.postMessage({ data: out }, [out.buffer]); this.n = 0; } }
+  process(inputs) {
+    const inp = inputs[0]; if (!inp || !inp.length) return true;
+    const a = inp[0], b = inp[1] || a, md = this.mode;
+    for (let i = 0; i < a.length; i++) {
+      const v = md === "0" ? a[i] : md === "1" ? b[i] : (a[i] + b[i]) / 2;
+      const av = v < 0 ? -v : v; if (av > this.peak) this.peak = av;
+      if (this.on) { this.buf[this.n++] = v; if (this.n === this.buf.length) this.flush(); }
+    }
+    if ((this.pn += a.length) >= 2048) { this.port.postMessage({ peak: this.peak }); this.peak = 0; this.pn = 0; }
+    return true;
+  }
+}
+registerProcessor("rec", Rec);`;
+let stopResolve = null;
+
+async function openInput(deviceId) {
+  stream?.getTracks().forEach(t => t.stop());
+  stream = await navigator.mediaDevices.getUserMedia({ audio: {
+    deviceId: deviceId ? { exact: deviceId } : undefined, channelCount: { ideal: 2 },
+    echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  const rate = stream.getAudioTracks()[0].getSettings().sampleRate;
+  if (ctx && rate && ctx.sampleRate !== rate) { await ctx.close(); ctx = null; }
+  if (!ctx) {
+    // stessa frequenza dell'ingresso (la Scarlett va a 44.1 kHz): niente conversione in tempo reale
+    ctx = new AudioContext(rate ? { sampleRate: rate, latencyHint: "playback" } : { latencyHint: "playback" });
+    await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" })));
+  }
+  await ctx.resume();
+  src?.disconnect(); proc?.disconnect();
+  src = ctx.createMediaStreamSource(stream);
+  proc = new AudioWorkletNode(ctx, "rec", { numberOfInputs: 1, numberOfOutputs: 0, channelCount: 2, channelCountMode: "explicit" });
+  proc.port.postMessage({ mode: $("ch").value });
+  proc.port.onmessage = e => {
+    const m = e.data;
+    if (m.peak !== undefined) showLevel(m.peak);
+    if (m.data) chunks.push(m.data);
+    if (m.done && stopResolve) { stopResolve(); stopResolve = null; }
+  };
+  src.connect(proc);
+  try { localStorage.setItem("regia-dev", stream.getAudioTracks()[0].getSettings().deviceId); } catch (e) {}
+  status(`Ingresso attivo: ${stream.getAudioTracks()[0].label} · ${(ctx.sampleRate / 1000).toFixed(1)} kHz. Parla e resta nel verde.`);
+  renderRec();
+}
+let shown = 0;
+function showLevel(peak) {
+  shown = Math.max(peak, shown * 0.85);
+  const db = shown > 0 ? 20 * Math.log10(shown) : -99;
+  const pct = Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+  requestAnimationFrame(() => {
+    const i = $("lvl"); i.style.width = pct + "%";
+    i.style.background = db > -3 ? "var(--rec)" : db > -10 ? "var(--warn)" : "var(--ok)";
+    $("lvlTxt").textContent = db <= -60 ? "silenzio" : db.toFixed(0) + " dBFS" + (db > -1 ? " · troppo alto, abbassa il gain" : "");
+  });
+}
+function wav(samples, rate) {
+  const len = samples.reduce((s, c) => s + c.length, 0);
+  const buf = new ArrayBuffer(44 + len * 2), v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + len * 2, true); w(8, "WAVE"); w(12, "fmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, "data"); v.setUint32(40, len * 2, true);
+  let o = 44;
+  for (const c of samples) for (let i = 0; i < c.length; i++, o += 2) {
+    const s = Math.max(-1, Math.min(1, c[i])); v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([buf], { type: "audio/wav" });
+}
+async function toggleRec() {
+  if (!stream || !vid?.scenes.length || tab !== "rec") return;
+  if (!recording) {
+    player?.pause(); chunks = []; recording = true; t0 = Date.now();
+    proc.port.postMessage({ cmd: "start", mode: $("ch").value });
+    $("recBtn").textContent = "■ Ferma e salva"; $("dot").classList.add("on"); $("prompter").classList.add("recording");
+    tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); $("timer").textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }, 250);
+    status("Sto registrando: leggi la scena, poi premi di nuovo.");
+  } else {
+    recording = false; clearInterval(tick);
+    $("recBtn").textContent = "● Registra scena"; $("dot").classList.remove("on"); $("prompter").classList.remove("recording");
+    status("Salvataggio…");
+    // aspetta che il worklet consegni gli ultimi campioni
+    await new Promise(res => { stopResolve = res; proc.port.postMessage({ cmd: "stop" }); setTimeout(res, 1500); });
+    let peak = 0; for (const c of chunks) for (let i = 0; i < c.length; i++) { const a = Math.abs(c[i]); if (a > peak) peak = a; }
+    const pdb = peak > 0 ? 20 * Math.log10(peak) : -99;
+    try {
+      await api(`/api/save?v=${encodeURIComponent(vid.name)}&n=${cur + 1}`, { method: "POST", body: wav(chunks, ctx.sampleRate) });
+      vid.done[cur] = true;
+      if (pdb < -30) status(`Scena ${cur + 1} salvata, ma è quasi muta (picco ${pdb.toFixed(0)} dB): controlla canale e gain e rifalla.`, true);
+      else if (pdb > -0.5) status(`Scena ${cur + 1} salvata, ma ha saturato: abbassa un po' il gain e rifalla.`, true);
+      else status(`Scena ${cur + 1} salvata (picco ${pdb.toFixed(0)} dB).` + (cur < vid.scenes.length - 1 ? " Premi → per la successiva." : " Era l'ultima: dillo a Claude per il montaggio."));
+      loadList();
+    } catch (e) { status("Salvataggio non riuscito: controlla che Regia sia ancora aperta.", true); }
+  }
+  renderRec();
+}
+function status(t, err) { $("status").textContent = t; $("status").classList.toggle("err", !!err); }
+
+// ---- eventi ----
+$("enable").onclick = async () => {
+  try {
+    await openInput();
+    await listDevices();
+    if ($("dev").value && $("dev").value !== stream.getAudioTracks()[0].getSettings().deviceId) await openInput($("dev").value);
+    $("enable").textContent = "Microfono attivo"; $("enable").disabled = true;
+  } catch (e) { status("Non riesco ad aprire l'ingresso audio. Consenti il microfono a Chrome (icona nella barra degli indirizzi) e riprova.", true); }
+};
+$("dev").onchange = () => openInput($("dev").value).catch(() => status("Questo ingresso non si apre. Scegline un altro.", true));
+$("ch").onchange = () => proc?.port.postMessage({ mode: $("ch").value });
+$("recBtn").onclick = toggleRec;
+$("playBtn").onclick = () => { player?.pause(); player = new Audio(`/audio?v=${encodeURIComponent(vid.name)}&n=${cur + 1}&t=${Date.now()}`); player.play(); };
+$("prevBtn").onclick = () => { if (cur > 0) { cur--; renderRec(); remember(); } };
+$("nextBtn").onclick = () => { if (cur < vid.scenes.length - 1) { cur++; renderRec(); remember(); } };
+$("tabScript").onclick = () => !recording && showTab("script");
+$("tabRec").onclick = () => !recording && showTab("rec");
+$("revealBtn").onclick = () => api("/api/reveal?v=" + encodeURIComponent(vid.name), { method: "POST" });
+$("saveScript").onclick = async () => {
+  try {
+    const old = vid.scenes.length;
+    vid = await api("/api/script?v=" + encodeURIComponent(vid.name), { method: "POST", body: $("script").value });
+    $("scriptStatus").textContent = `Copione salvato: ${vid.scenes.length} scene.` + (old && old !== vid.scenes.length && vid.done.some(Boolean) ? " Il numero di scene è cambiato: ricontrolla le registrazioni." : "");
+    cur = 0; renderRec(); loadList();
+  } catch (e) { $("scriptStatus").textContent = "Salvataggio non riuscito."; }
+};
+$("newBtn").onclick = async () => {
+  const name = $("newName").value.trim();
+  if (!name || name.includes("/") || name.startsWith(".")) return;
+  try { await api("/api/videos", { method: "POST", body: JSON.stringify({ name }) }); $("newName").value = ""; tab = "script"; await loadList(name); }
+  catch (e) { $("newName").focus(); }
+};
+$("newName").addEventListener("keydown", e => { if (e.key === "Enter") $("newBtn").click(); });
+document.addEventListener("keydown", e => {
+  if (["TEXTAREA", "INPUT", "SELECT"].includes(e.target.tagName)) return;
+  if (e.code === "Space") { e.preventDefault(); toggleRec(); }
+  if (!recording && tab === "rec" && e.key === "ArrowRight") $("nextBtn").click();
+  if (!recording && tab === "rec" && e.key === "ArrowLeft") $("prevBtn").click();
+});
+window.addEventListener("beforeunload", e => { if (recording) e.preventDefault(); });
+
+// avvio: riapre l'ultimo video usato
+api("/api/config").then(c => { if (/^https:\/\//.test(c.uploadPage || "")) { $("uploadLink").href = c.uploadPage; $("uploadLink").hidden = false; } }).catch(() => {});
+(async () => {
+  let last = {}; try { last = JSON.parse(localStorage.getItem("regia") || "{}"); } catch (e) {}
+  tab = last.tab || "rec";
+  await loadList();
+  if (last.v && V.some(v => v.name === last.v)) { cur = last.cur || 0; openVideo(last.v, true); }
+})();
+</script>
+</body>
+</html>
