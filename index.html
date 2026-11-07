@@ -107,8 +107,13 @@ kbd { font: 500 12px var(--mono); border: 1px solid var(--line); border-radius: 
         <section class="panel">
           <div class="bar">
             <div class="f"><label class="label" for="dev">Ingresso</label><select id="dev"><option>Premi “Attiva microfono”</option></select></div>
-            <div class="f"><label class="label" for="ch">Canale</label>
+            <div class="f" id="chField"><label class="label" for="ch">Canale</label>
               <select id="ch"><option value="0">Ingresso 1</option><option value="1">Ingresso 2</option><option value="mix">Entrambi</option></select></div>
+            <div class="f"><label class="label" for="proc">Microfono</label>
+              <select id="proc">
+                <option value="raw">Scheda audio o microfono esterno</option>
+                <option value="voice">Microfono del computer, cuffie o AirPods</option>
+              </select></div>
             <div class="meter"><span class="label">Livello</span><div class="track"><i id="lvl"></i></div><span class="mtxt" id="lvlTxt">—</span></div>
             <button id="enable">Attiva microfono</button>
           </div>
@@ -209,8 +214,20 @@ async function listDevices() {
   const sel = $("dev"); sel.textContent = "";
   devs.forEach(d => { const o = document.createElement("option"); o.value = d.deviceId; o.textContent = d.label || "Ingresso"; sel.appendChild(o); });
   let pick = null; try { pick = localStorage.getItem("regia-dev"); } catch (e) {}
-  if (!devs.some(d => d.deviceId === pick)) pick = devs.find(d => /scarlett/i.test(d.label))?.deviceId;
+  if (!devs.some(d => d.deviceId === pick)) {
+    // senza una scelta salvata: prima una scheda o un microfono esterno, poi quello integrato; mai gli ingressi virtuali
+    const real = devs.filter(d => !VIRTUAL.test(d.label) && d.deviceId !== "default" && d.deviceId !== "communications");
+    pick = (real.find(d => !BUILTIN.test(d.label)) || real[0] || devs[0])?.deviceId;
+  }
   if (pick) sel.value = pick;
+}
+// ingressi software (registrazione di sistema, videochiamate) e microfoni "da computer"
+const VIRTUAL = /blackhole|background music|soundflower|loopback|teams|zoom|aggregat|virtual|multiple|ndi/i;
+const BUILTIN = /macbook|imac|mac studio|mac mini|integrat|built-in|interno|internal|airpods|iphone|ipad|headset|cuffie|bluetooth|hands-free|webcam|camera/i;
+
+function procFor(deviceId, label) {
+  try { const m = JSON.parse(localStorage.getItem("regia-proc") || "{}"); if (m[deviceId]) return m[deviceId]; } catch (e) {}
+  return BUILTIN.test(label || "") ? "voice" : "raw";
 }
 // Registrazione nel thread audio (AudioWorklet): l'interfaccia non può più far perdere campioni.
 // Il worklet accumula blocchi da 16384 campioni e li passa alla pagina; il livello arriva a parte.
@@ -241,15 +258,24 @@ class Rec extends AudioWorkletProcessor {
 registerProcessor("rec", Rec);`;
 let stopResolve = null;
 
-async function openInput(deviceId) {
+async function openInput(deviceId, procMode) {
   stream?.getTracks().forEach(t => t.stop());
+  // "raw": segnale pulito per schede audio e microfoni esterni.
+  // "voice": riduzione del rumore e volume automatico del browser, utili con microfoni integrati e cuffie.
+  const label = (await navigator.mediaDevices.enumerateDevices()).find(d => d.deviceId === deviceId)?.label || "";
+  const mode = procMode || procFor(deviceId, label);
+  const voice = mode === "voice";
+  $("proc").value = mode;
   stream = await navigator.mediaDevices.getUserMedia({ audio: {
-    deviceId: deviceId ? { exact: deviceId } : undefined, channelCount: { ideal: 2 },
-    echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    deviceId: deviceId ? { exact: deviceId } : undefined, channelCount: { ideal: voice ? 1 : 2 },
+    echoCancellation: false, noiseSuppression: voice, autoGainControl: voice } });
+  const channels = stream.getAudioTracks()[0].getSettings().channelCount || 1;
+  $("chField").hidden = channels < 2;
+  if (channels < 2) $("ch").value = "0";
   const rate = stream.getAudioTracks()[0].getSettings().sampleRate;
   if (ctx && rate && ctx.sampleRate !== rate) { await ctx.close(); ctx = null; }
   if (!ctx) {
-    // stessa frequenza dell'ingresso (la Scarlett va a 44.1 kHz): niente conversione in tempo reale
+    // stessa frequenza dell'ingresso: niente conversione in tempo reale
     ctx = new AudioContext(rate ? { sampleRate: rate, latencyHint: "playback" } : { latencyHint: "playback" });
     await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" })));
   }
@@ -266,7 +292,8 @@ async function openInput(deviceId) {
   };
   src.connect(proc);
   try { localStorage.setItem("regia-dev", stream.getAudioTracks()[0].getSettings().deviceId); } catch (e) {}
-  status(`Ingresso attivo: ${stream.getAudioTracks()[0].label} · ${(ctx.sampleRate / 1000).toFixed(1)} kHz. Parla e resta nel verde.`);
+  status(`Ingresso attivo: ${stream.getAudioTracks()[0].label} · ${(ctx.sampleRate / 1000).toFixed(1)} kHz` +
+    (voice ? " · riduzione del rumore attiva. Parla a 20-30 cm dal microfono." : ". Parla e resta nel verde."));
   renderRec();
 }
 let shown = 0;
@@ -326,14 +353,19 @@ function status(t, err) { $("status").textContent = t; $("status").classList.tog
 // ---- eventi ----
 $("enable").onclick = async () => {
   try {
-    await openInput();
+    await openInput();            // prima richiesta: sblocca i nomi dei dispositivi
     await listDevices();
-    if ($("dev").value && $("dev").value !== stream.getAudioTracks()[0].getSettings().deviceId) await openInput($("dev").value);
+    await openInput($("dev").value || undefined);   // riapre con l'ingresso e la modalità giusti
     $("enable").textContent = "Microfono attivo"; $("enable").disabled = true;
   } catch (e) { status("Non riesco ad aprire l'ingresso audio. Consenti il microfono a Chrome (icona nella barra degli indirizzi) e riprova.", true); }
 };
 $("dev").onchange = () => openInput($("dev").value).catch(() => status("Questo ingresso non si apre. Scegline un altro.", true));
 $("ch").onchange = () => proc?.port.postMessage({ mode: $("ch").value });
+$("proc").onchange = () => {
+  const id = $("dev").value;
+  try { const m = JSON.parse(localStorage.getItem("regia-proc") || "{}"); m[id] = $("proc").value; localStorage.setItem("regia-proc", JSON.stringify(m)); } catch (e) {}
+  if (stream) openInput(id, $("proc").value).catch(() => status("Non riesco a riaprire l'ingresso. Riprova.", true));
+};
 $("recBtn").onclick = toggleRec;
 $("playBtn").onclick = () => { player?.pause(); player = new Audio(`/audio?v=${encodeURIComponent(vid.name)}&n=${cur + 1}&t=${Date.now()}`); player.play(); };
 $("prevBtn").onclick = () => { if (cur > 0) { cur--; renderRec(); remember(); } };

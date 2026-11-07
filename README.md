@@ -11,14 +11,16 @@ direttamente dalla tua scheda audio.
 - **Copione**: scrivi o incolli il testo; ogni paragrafo, separato da una riga vuota, è una scena.
 - **Teleprompter e registrazione**: il testo della scena compare grande; <kbd>Spazio</kbd> avvia e ferma,
   <kbd>←</kbd> <kbd>→</kbd> cambiano scena, puoi riascoltare e rifare ogni scena.
-- **Qualità piena**: niente cancellazione dell'eco, riduzione del rumore o guadagno automatico del browser.
-  La registrazione gira in un AudioWorklet (thread audio dedicato), alla frequenza nativa della scheda,
-  quindi non ci sono salti anche se la pagina rallenta.
-- **Controllo del livello**: misuratore in tempo reale, scelta dell'ingresso e del canale
-  (ingresso 1, ingresso 2 o entrambi) e avviso se una scena è troppo bassa o satura.
-- Ricorda l'ultimo video, la scena e l'ingresso usati.
-
-Provata con una Focusrite Scarlett 2i2 4th Gen, ma funziona con qualsiasi ingresso audio.
+- **Funziona con qualsiasi microfono**, con due modalità scelte in automatico in base all'ingresso:
+  - *Scheda audio o microfono esterno* (Focusrite, microfono USB…): segnale pulito, senza elaborazioni del browser,
+    con la scelta del canale (ingresso 1, ingresso 2 o entrambi);
+  - *Microfono del computer, cuffie o AirPods*: riduzione del rumore e volume automatico del browser,
+    così anche senza scheda audio la voce esce chiara e a un volume giusto.
+  Puoi cambiare modalità a mano: la scelta viene ricordata per ogni ingresso.
+- **Niente salti**: la registrazione gira in un AudioWorklet (thread audio dedicato), alla frequenza nativa
+  dell'ingresso, quindi non perde campioni anche se la pagina rallenta.
+- **Controllo del livello**: misuratore in tempo reale e avviso se una scena è troppo bassa o satura.
+- Ricorda l'ultimo video, la scena e l'ingresso usati, e non seleziona mai ingressi virtuali (BlackHole, Teams…).
 
 ## Requisiti
 
@@ -65,8 +67,15 @@ Il pulsante "Registra la voce" apre Overdub su `localhost:8765`.
 
 ## Consigli per la voce
 
-- Imposta la scheda audio a **48 kHz**, lo standard per i video (su Focusrite: Focusrite Control 2 → impostazioni → Sample Rate).
-- Regola il gain in modo che i picchi arrivino intorno a -10 / -6 dB.
+**Senza scheda audio** (microfono del Mac, AirPods, cuffie):
+- registra in una stanza piccola e arredata: tende, divano e libri riducono il rimbombo;
+- tieni il microfono a 20-30 cm dalla bocca, sempre alla stessa distanza;
+- con le cuffie, evita che il microfono strusci sui vestiti;
+- spegni ventilatori, condizionatore e notifiche.
+
+**Con una scheda audio:**
+- impostala a **48 kHz**, lo standard per i video (per esempio su Focusrite: Focusrite Control 2 → impostazioni → Sample Rate);
+- regola il gain in modo che i picchi arrivino intorno a -10 / -6 dB.
 
 ## Privacy
 
