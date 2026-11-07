@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Regia</title>
+<title>Overdub</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout: colonna sinistra con i video, area destra con schede Copione / Registra */
@@ -73,7 +73,7 @@ kbd { font: 500 12px var(--mono); border: 1px solid var(--line); border-radius: 
 <body>
 <div class="app">
   <aside>
-    <h1><span class="dot" id="dot"></span>Regia</h1>
+    <h1><span class="dot" id="dot"></span>Overdub</h1>
     <div class="f">
       <label class="label" for="newName">Nuovo video</label>
       <div class="newrow"><input type="text" id="newName" placeholder="Nome della cartella"><button id="newBtn">Crea</button></div>
@@ -317,7 +317,7 @@ async function toggleRec() {
       else if (pdb > -0.5) status(`Scena ${cur + 1} salvata, ma ha saturato: abbassa un po' il gain e rifalla.`, true);
       else status(`Scena ${cur + 1} salvata (picco ${pdb.toFixed(0)} dB).` + (cur < vid.scenes.length - 1 ? " Premi → per la successiva." : " Era l'ultima: dillo a Claude per il montaggio."));
       loadList();
-    } catch (e) { status("Salvataggio non riuscito: controlla che Regia sia ancora aperta.", true); }
+    } catch (e) { status("Salvataggio non riuscito: controlla che Overdub sia ancora aperta.", true); }
   }
   renderRec();
 }

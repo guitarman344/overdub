@@ -1,4 +1,4 @@
-# Regia
+# Overdub
 
 Piccola app per Mac che aiuta a registrare la voce fuori campo dei video per YouTube e TikTok.
 Gira nel browser su `localhost`, legge il copione scena per scena e registra ogni scena in un file WAV a parte,
@@ -28,7 +28,7 @@ Provata con una Focusrite Scarlett 2i2 4th Gen, ma funziona con qualsiasi ingres
 ## Avvio
 
 1. Scarica o clona il repository.
-2. Fai doppio clic su **`Regia.command`**: avvia il server, se non è già acceso, e apre `http://localhost:8765` in Chrome.
+2. Fai doppio clic su **`Overdub.command`**: avvia il server, se non è già acceso, e apre `http://localhost:8765` in Chrome.
    La prima volta macOS potrebbe chiederti di confermare l'apertura.
 3. In Chrome premi **Attiva microfono** e consenti l'accesso.
 

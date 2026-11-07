@@ -1,4 +1,4 @@
-"""Regia: app locale per copioni e voce dei video. Serve http://localhost:8765.
+"""Overdub: app locale per copioni e voce dei video. Serve http://localhost:8765.
 
 Ogni sottocartella di VIDEO_ROOT è un video: contiene copione.txt (scene separate da una riga vuota)
 e le registrazioni in voce/scena-N.wav.
@@ -130,5 +130,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     os.makedirs(VIDEO_ROOT, exist_ok=True)
-    print(f"Regia pronta: http://localhost:{PORT}  ->  {VIDEO_ROOT}", flush=True)
+    print(f"Overdub pronta: http://localhost:{PORT}  ->  {VIDEO_ROOT}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
